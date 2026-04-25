@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shadowing">
+<title>Shadowing Practice</title>
+<style>
+  :root {
+    --bg: #000;
+    --bg2: #1c1c1e;
+    --bg3: #2c2c2e;
+    --bg4: #3a3a3c;
+    --fg: #fff;
+    --fg2: #ebebf5cc;
+    --fg3: #ebebf599;
+    --blue: #0a84ff;
+    --green: #30d158;
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --purple: #bf5af2;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--fg); font-family: -apple-system, 'SF Pro Text', sans-serif; overflow: hidden; }
+
+  #app { display: flex; flex-direction: column; height: 100dvh; }
+  #header { padding: 52px 20px 12px; background: var(--bg); border-bottom: 1px solid var(--bg3); flex-shrink: 0; }
+  #header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  #header-sub { font-size: 13px; color: var(--fg3); margin-top: 2px; }
+  #content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  #tabbar { display: flex; background: var(--bg2); border-top: 1px solid var(--bg3); padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px 4px; gap: 3px; font-size: 10px; color: var(--fg3); cursor: pointer; transition: color .15s; }
+  .tab.active { color: var(--blue); }
+  .tab svg { width: 22px; height: 22px; }
+
+  .panel { display: none; padding: 16px; min-height: 100%; }
+  .panel.active { display: block; }
+
+  .card { background: var(--bg2); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 11px; font-weight: 600; color: var(--fg3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+
+  /* Category pills */
+  #cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin-bottom: 14px; }
+  #cats::-webkit-scrollbar { display: none; }
+  .cat-pill { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: var(--bg3); color: var(--fg2); cursor: pointer; border: none; transition: background .15s, color .15s; }
+  .cat-pill.active { background: var(--blue); color: #fff; }
+
+  /* Text cards */
+  .text-card { background: var(--bg2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: background .15s; border: 2px solid transparent; }
+  .text-card:active { background: var(--bg3); }
+  .text-card.selected { border-color: var(--blue); }
+  .text-card-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .text-card-title { font-size: 15px; font-weight: 600; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 10px; }
+  .badge-easy { background: #30d15822; color: var(--green); }
+  .badge-medium { background: #ff9f0a22; color: var(--orange); }
+  .badge-hard { background: #ff453a22; color: var(--red); }
+  .text-card-preview { font-size: 13px; color: var(--fg3); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .text-card-info { font-size: 11px; color: var(--fg3); margin-top: 6px; }
+
+  /* Custom input */
+  #custom-input { width: 100%; background: var(--bg3); border: none; border-radius: 10px; padding: 12px; color: var(--fg); font-size: 15px; line-height: 1.6; resize: none; outline: none; font-family: inherit; }
+  #custom-input::placeholder { color: var(--fg3); }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 20px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn:active { opacity: 0.7; }
+  .btn-blue { background: var(--blue); color: #fff; width: 100%; margin-top: 10px; }
+
+  /* Player */
+  #player-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  #player-meta { font-size: 13px; color: var(--fg3); margin-bottom: 16px; }
+
+  /* Word-highlighted text */
+  #text-display { background: var(--bg2); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; font-size: 17px; line-height: 1.8; max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .word { display: inline; border-radius: 3px; transition: background .08s, color .08s; }
+  .word.current { background: var(--blue); color: #fff; padding: 0 2px; }
+  .word.spoken { color: var(--fg3); }
+
+  /* Progress */
+  #progress-wrap { margin-bottom: 14px; }
+  #progress-bar { width: 100%; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  #progress-fill { height: 100%; background: var(--blue); width: 0%; border-radius: 2px; transition: width .15s linear; }
+  #time-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg3); margin-top: 4px; }
+
+  /* Speed */
+  #speed-wrap { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .speed-btn { padding: 6px 12px; border-radius: 8px; border: none; background: var(--bg3); color: var(--fg2); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .speed-btn.active { background: var(--blue); color: #fff; }
+
+  /* Sentence mode toggle */
+  #sentence-mode { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg2); border-radius: 10px; margin-bottom: 12px; }
+  #sentence-mode span { font-size: 14px; color: var(--fg2); }
+  .toggle { width: 44px; height: 26px; border-radius: 13px; background: var(--bg4); position: relative; cursor: pointer; border: none; transition: background .2s; flex-shrink: 0; }
+  .toggle.on { background: var(--green); }
+  .toggle::after { content: ''; position: absolute; width: 22px; height: 22px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  .toggle.on::after { left: 20px; }
+
+  /* Sentence navigator */
+  #sent-nav { display: none; margin-bottom: 12px; }
+  #sent-nav.visible { display: block; }
+  #sent-display { background: var(--bg2); border-radius: var(--radius); padding: 16px; font-size: 18px; line-height: 1.75; min-height: 90px; margin-bottom: 10px; }
+  #sent-counter { font-size: 12px; color: var(--fg3); margin-bottom: 8px; }
+  #sent-controls { display: flex; gap: 8px; }
+  #sent-controls button { flex: 1; padding: 10px; border-radius: 10px; border: none; background: var(--bg3); color: var(--fg2); font-size: 14px; font-weight: 600; cursor: pointer; }
+
+  /* A/B Loop */
+  #ab-wrap { display: flex; gap: 8px; margin-bottom: 8px; }
+  .ab-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; background: var(--bg3); color: var(--fg2); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ab-btn.set { background: var(--purple); color: #fff; }
+  #ab-status { text-align: center; font-size: 12px; color: var(--fg3); margin-bottom: 12px; min-height: 16px; }
+
+  /* Controls */
+  #controls { display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 16px; }
+  .ctrl-btn { background: none; border: none; cursor: pointer; color: var(--fg); display: flex; align-items: center; justify-content: center; }
+  .ctrl-btn:active { opacity: 0.6; }
+  #play-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--blue); color: #fff; }
+  #play-btn svg { width: 30px; height: 30px; }
+  .ctrl-btn.side svg { width: 28px; height: 28px; color: var(--fg2); }
+
+  /* Recording */
+  #rec-btn { width: 100%; padding: 14px; border-radius: var(--radius); border: none; background: var(--red); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  #rec-btn.recording { background: var(--bg4); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+  #waveform { width: 100%; height: 60px; border-radius: 10px; background: var(--bg3); display: block; }
+  #rec-playback { margin-top: 10px; display: none; }
+  #rec-audio { width: 100%; border-radius: 8px; }
+
+  /* History */
+  .hist-item { background: var(--bg2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .hist-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .hist-meta { font-size: 12px; color: var(--fg3); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--fg3); font-size: 15px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="header">
+    <h1>Shadowing</h1>
+    <p id="header-sub">Choose a text to practice</p>
+  </div>
+
+  <div id="content">
+
+    <!-- ── Library ── -->
+    <div id="panel-library" class="panel active">
+      <div id="cats">
+        <button class="cat-pill active" onclick="filterCat('all',this)">All</button>
+        <button class="cat-pill" onclick="filterCat('daily',this)">Daily Life</button>
+        <button class="cat-pill" onclick="filterCat('business',this)">Business</button>
+        <button class="cat-pill" onclick="filterCat('tech',this)">Technology</button>
+        <button class="cat-pill" onclick="filterCat('health',this)">Health</button>
+        <button class="cat-pill" onclick="filterCat('travel',this)">Travel</button>
+        <button class="cat-pill" onclick="filterCat('science',this)">Science</button>
+      </div>
+      <div id="text-list"></div>
+
+      <div class="card" style="margin-top:8px">
+        <div class="card-title">Custom Text</div>
+        <textarea id="custom-input" rows="5" placeholder="Paste or type your own English text here..."></textarea>
+        <button class="btn btn-blue" onclick="loadCustom()">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Practice This Text
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Player ── -->
+    <div id="panel-player" class="panel">
+      <div id="player-title">—</div>
+      <div id="player-meta">Select a text from Library</div>
+
+      <!-- Full text (word highlight mode) -->
+      <div id="text-display"></div>
+
+      <!-- Sentence mode -->
+      <div id="sent-nav">
+        <div id="sent-counter"></div>
+        <div id="sent-display">—</div>
+        <div id="sent-controls">
+          <button onclick="sentPrev()">← Prev</button>
+          <button onclick="sentRepeat()">↺ Repeat</button>
+          <button onclick="sentNext()">Next →</button>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div id="progress-wrap">
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+        <div id="time-labels"><span id="time-cur">0:00</span><span id="time-tot">0:00</span></div>
+      </div>
+
+      <!-- Speed -->
+      <div id="speed-wrap">
+        <button class="speed-btn" onclick="setSpeed(0.25,this)">×0.25</button>
+        <button class="speed-btn" onclick="setSpeed(0.5,this)">×0.5</button>
+        <button class="speed-btn" onclick="setSpeed(0.75,this)">×0.75</button>
+        <button class="speed-btn active" onclick="setSpeed(1.0,this)">×1.0</button>
+        <button class="speed-btn" onclick="setSpeed(1.25,this)">×1.25</button>
+        <button class="speed-btn" onclick="setSpeed(1.5,this)">×1.5</button>
+      </div>
+
+      <!-- Sentence mode toggle -->
+      <div id="sentence-mode">
+        <span>Sentence-by-sentence</span>
+        <button class="toggle" id="sent-toggle" onclick="toggleSentMode()"></button>
+      </div>
+
+      <!-- A/B Loop -->
+      <div id="ab-wrap">
+        <button class="ab-btn" id="ab-a" onclick="setAB('A')">Set A</button>
+        <button class="ab-btn" id="ab-b" onclick="setAB('B')">Set B</button>
+        <button class="ab-btn" id="ab-clear" onclick="clearAB()">Clear</button>
+      </div>
+      <div id="ab-status"></div>
+
+      <!-- Transport -->
+      <div id="controls">
+        <button class="ctrl-btn side" title="Rewind" onclick="skipBack()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 2 12 11 7"/><polyline points="18 17 9 12 18 7"/></svg>
+        </button>
+        <button id="play-btn" class="ctrl-btn" onclick="togglePlay()">
+          <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <button class="ctrl-btn side" title="Restart" onclick="restartText()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.41"/></svg>
+        </button>
+      </div>
+
+      <!-- Recording -->
+      <div class="card">
+        <div class="card-title">Record Yourself</div>
+        <button id="rec-btn" onclick="toggleRec()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          Record
+        </button>
+        <canvas id="waveform"></canvas>
+        <div id="rec-playback"><audio id="rec-audio" controls></audio></div>
+      </div>
+    </div>
+
+    <!-- ── History ── -->
+    <div id="panel-history" class="panel">
+      <div id="hist-list"></div>
+    </div>
+
+  </div>
+
+  <div id="tabbar">
+    <div class="tab active" id="tab-library" onclick="switchTab('library')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Library
+    </div>
+    <div class="tab" id="tab-player" onclick="switchTab('player')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+      Player
+    </div>
+    <div class="tab" id="tab-history" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </div>
+  </div>
+
+</div>
+<script>
+// ── Texts ──────────────────────────────────────────────────────────────────
+const TEXTS = [
+  { id:1, cat:'daily', level:'easy', title:'Morning Routine', words:155,
+    body:`Every morning, I wake up at seven o'clock and start my day with a glass of water. I believe that staying hydrated is one of the most important things you can do for your health. After that, I spend about twenty minutes stretching and doing some light exercise to get my body moving. Then I make breakfast, usually something simple like toast with eggs or a bowl of oatmeal with fruit. While eating, I like to read the news or listen to a podcast to catch up on what's happening in the world. Getting ready for work only takes me about thirty minutes because I always prepare my clothes the night before. By eight thirty, I'm out the door and feeling ready to take on the day. Having a consistent morning routine has really changed my life for the better.` },
+
+  { id:2, cat:'daily', level:'easy', title:'Weekend Plans', words:148,
+    body:`This weekend, I'm planning to do a few things that I've been looking forward to all week. On Saturday morning, I want to go for a long walk in the park near my house. The weather forecast looks great, so it should be a perfect day to be outside. After the walk, I'm meeting some friends for lunch at a new Italian restaurant that just opened downtown. I've heard really good things about their pasta, so I'm excited to try it. On Sunday, I'm going to spend most of the day at home. I have some cleaning and laundry to get done, and I also want to finish the book I've been reading. Maybe in the evening I'll watch a movie or video chat with my family. It's going to be a nice, relaxing weekend, and I really need it after such a busy week.` },
+
+  { id:3, cat:'business', level:'medium', title:'The Art of Negotiation', words:162,
+    body:`Negotiation is a skill that comes up in almost every area of professional life, from salary discussions to deal-making and conflict resolution. The most effective negotiators understand that the goal is not simply to win but to reach an agreement that works well for both parties. Before entering any negotiation, it's essential to do your homework. Know your own priorities clearly, and try to understand what the other side values most. During the conversation, listen actively and ask thoughtful questions rather than just pushing your own agenda. Often, what people say they want and what they actually need are quite different, and a good negotiator finds ways to bridge that gap. It also helps to stay calm and avoid taking things personally when the discussion gets tough. Being willing to make small concessions shows good faith and often encourages the other party to do the same. With practice and patience, anyone can become a stronger, more confident negotiator.` },
+
+  { id:4, cat:'business', level:'medium', title:'Remote Work Culture', words:158,
+    body:`Remote work has fundamentally transformed the way companies operate around the world. Over the past few years, millions of employees have moved from traditional offices to home-based setups, and many organizations are now embracing a hybrid model that combines both approaches. While working from home offers clear benefits such as flexibility, reduced commute time, and better work-life balance, it also presents real challenges. Building a strong team culture without face-to-face interaction requires deliberate effort. Managers need to communicate more clearly and more frequently, and employees must take greater responsibility for staying productive and connected. Video calls, messaging platforms, and project management tools have become essential to keeping distributed teams aligned. Companies that invest in remote work infrastructure and foster a culture of trust tend to see higher engagement and retention. The future of work will likely look very different from the past, and those who adapt early will have a significant competitive advantage.` },
+
+  { id:5, cat:'tech', level:'medium', title:'Artificial Intelligence Today', words:165,
+    body:`Artificial intelligence is no longer a concept found only in science fiction. It has quietly become part of our everyday lives, powering the recommendations we see on streaming platforms, the voice assistants on our phones, and the spam filters in our email. Large language models, in particular, have made significant advances in recent years, enabling machines to generate text, answer questions, and even write code with impressive accuracy. However, along with these exciting capabilities come important questions about safety, bias, and the future of work. Experts disagree on how quickly AI will continue to improve and what the long-term consequences might be for employment and society. What most people agree on is that artificial intelligence is a powerful technology that requires careful development and thoughtful regulation. Rather than fearing it or ignoring it, the most productive approach is to understand what it can and cannot do, and to find ways to use it responsibly for the benefit of everyone.` },
+
+  { id:6, cat:'tech', level:'hard', title:'Cybersecurity Fundamentals', words:170,
+    body:`In an increasingly connected world, cybersecurity has become one of the most critical concerns for individuals, businesses, and governments alike. Every day, millions of cyberattacks target systems ranging from personal laptops to critical national infrastructure. The vast majority of successful breaches are not the result of sophisticated hacking techniques but rather simple human error, such as clicking a phishing link or using a weak password. This is why security experts emphasize that education and awareness are the first line of defense. Strong, unique passwords combined with two-factor authentication can significantly reduce your risk of being compromised. Keeping software updated ensures that known vulnerabilities are patched before attackers can exploit them. At the organizational level, companies must develop comprehensive incident response plans and conduct regular security audits. As our reliance on digital systems continues to grow, so does the importance of protecting them. Cybersecurity is no longer just an IT issue. It is a fundamental business priority and a personal responsibility for everyone who uses the internet.` },
+
+  { id:7, cat:'health', level:'easy', title:'The Power of Sleep', words:152,
+    body:`Sleep is one of the most important things you can do for your health, yet it is often the first thing we sacrifice when life gets busy. During sleep, your body and brain go through essential processes that help you recover from the day, consolidate memories, and regulate mood. Most adults need between seven and nine hours of sleep per night, but many people consistently get far less than that. Chronic sleep deprivation has been linked to a wide range of health problems, including heart disease, obesity, and weakened immunity. It also affects concentration, decision-making, and emotional stability in a very noticeable way. The good news is that building better sleep habits is entirely possible with some intentional changes. Going to bed and waking up at the same time every day helps set your internal clock. Limiting screen time before bed and keeping your bedroom cool and dark can also make a big difference. Prioritizing sleep is truly one of the best investments you can make in your overall well-being.` },
+
+  { id:8, cat:'health', level:'medium', title:'Mindfulness and Stress', words:160,
+    body:`Stress is an unavoidable part of modern life, but how we respond to it makes all the difference. Mindfulness, the practice of paying deliberate attention to the present moment without judgment, has gained considerable scientific support as an effective tool for managing stress and improving mental well-being. Research has shown that even a few minutes of mindful breathing each day can lower cortisol levels, reduce anxiety, and improve focus. The basic idea is simple. Instead of getting caught up in worries about the future or regrets about the past, you intentionally bring your attention back to what is happening right now. You can practice mindfulness anywhere, whether you are eating, walking, or simply sitting quietly. Many people find it helpful to use apps or guided meditations when starting out. Over time, the practice tends to become more natural, and people often report feeling more calm, patient, and resilient in the face of daily challenges. Mindfulness is not a quick fix, but with consistent practice, it can genuinely transform the way you experience stress.` },
+
+  { id:9, cat:'travel', level:'easy', title:'Exploring a New City', words:150,
+    body:`One of the greatest joys of travel is discovering a city you have never visited before. The moment you step off the train or plane and take in the unfamiliar sights and sounds, there is a real sense of excitement and possibility. I always try to spend my first morning just walking around without a strict plan, letting myself get a little lost and see what I find. Some of the best experiences I have had while traveling happened completely by accident, like stumbling upon a local market or a hidden garden that was not in any guidebook. Of course, it also helps to do some research before you arrive. Knowing a bit about the history and culture of a place makes everything you see more meaningful. Talking to local residents, even if just briefly, gives you insights that no travel app can offer. Whether you are in a big capital city or a small coastal town, every place has its own unique character waiting to be discovered.` },
+
+  { id:10, cat:'travel', level:'medium', title:'Sustainable Travel', words:163,
+    body:`As travel becomes more accessible and affordable, the environmental impact of tourism has grown into a serious concern. Flights alone account for a significant percentage of global carbon emissions, and the rapid growth of popular destinations has placed enormous strain on local ecosystems and communities. Sustainable travel is about making choices that minimize your negative impact while still allowing you to experience the world meaningfully. This can mean choosing train travel over flying when possible, staying at locally owned accommodations instead of large international chains, and being thoughtful about where and how you spend your money. It also means respecting local customs, not disrupting wildlife, and leaving natural spaces exactly as you found them. Some travelers choose to offset their carbon footprint through verified programs that fund environmental projects. Others simply travel less frequently but make each trip more intentional and immersive. The key insight is that how you travel matters just as much as where you go. By being more conscious travelers, we can help ensure that beautiful places remain intact for future generations.` },
+
+  { id:11, cat:'science', level:'medium', title:'The Ocean\'s Mystery', words:158,
+    body:`Despite covering more than seventy percent of Earth's surface, the world's oceans remain largely unexplored. Scientists estimate that we have mapped only about twenty percent of the ocean floor in detail, which means vast regions of our own planet are still completely unknown to us. The deep sea, in particular, is one of the most extreme environments on Earth, with crushing pressure, total darkness, and temperatures near freezing. Yet life has found extraordinary ways to thrive there. Creatures with bioluminescent organs, fish with enormous eyes adapted to detect the faintest traces of light, and giant squid that may grow to remarkable lengths are just a few examples of the surprising diversity found in the deep ocean. Beyond biology, the ocean plays a fundamental role in regulating Earth's climate by absorbing heat and carbon dioxide from the atmosphere. Understanding how the ocean works is therefore not just a matter of scientific curiosity but an urgent priority as we face the challenges of climate change.` },
+
+  { id:12, cat:'science', level:'hard', title:'Quantum Computing', words:167,
+    body:`Quantum computing represents one of the most profound technological shifts on the horizon, with the potential to solve problems that are completely beyond the reach of today's most powerful classical computers. Unlike traditional computers that process information using bits, which can only be in a state of zero or one, quantum computers use quantum bits, or qubits, which can exist in multiple states simultaneously thanks to a phenomenon called superposition. Another key principle, quantum entanglement, allows qubits to be correlated in ways that enable massively parallel computation. These properties give quantum computers extraordinary power for specific types of problems, such as simulating molecular structures for drug discovery, optimizing complex logistics networks, and breaking certain types of encryption. However, quantum computing is still in a very early stage of development. Maintaining qubits in a stable quantum state is technically extremely difficult, and errors are common. Nevertheless, the progress being made by research institutions and technology companies around the world suggests that practical quantum computing may be closer than it once seemed.` }
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let currentText = null;
+let words = [];
+let sentences = [];
+let currentWordIdx = -1;
+let currentSentIdx = 0;
+let speed = 1.0;
+let isPlaying = false;
+let utterance = null;
+let abA = null, abB = null;
+let sentMode = false;
+let recMediaRecorder = null;
+let recChunks = [];
+let recStream = null;
+let animFrame = null;
+let history = JSON.parse(localStorage.getItem('sh_hist3') || '[]');
+let currentCat = 'all';
+let totalEstSec = 0;
+let timerInterval = null;
+
+// ── Library ────────────────────────────────────────────────────────────────
+function filterCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderLibrary();
+}
+
+function renderLibrary() {
+  const filtered = currentCat === 'all' ? TEXTS : TEXTS.filter(t => t.cat === currentCat);
+  document.getElementById('text-list').innerHTML = filtered.map(t => `
+    <div class="text-card ${currentText && currentText.id === t.id ? 'selected' : ''}" onclick="loadText(${t.id})">
+      <div class="text-card-meta">
+        <span class="text-card-title">${t.title}</span>
+        <span class="badge badge-${t.level}">${cap(t.level)}</span>
+      </div>
+      <div class="text-card-preview">${t.body.substring(0,120)}…</div>
+      <div class="text-card-info">~${t.words} words · ~${Math.round(t.words/130)} min</div>
+    </div>
+  `).join('');
+}
+
+function cap(s) { return s.charAt(0).toUpperCase()+s.slice(1); }
+
+// ── Load text ──────────────────────────────────────────────────────────────
+function loadText(id) {
+  const t = TEXTS.find(x => x.id === id);
+  if (!t) return;
+  stopAll();
+  currentText = t;
+  buildPlayer(t.title, t.body);
+  renderLibrary();
+  switchTab('player');
+}
+
+function loadCustom() {
+  const body = document.getElementById('custom-input').value.trim();
+  if (!body) { alert('Please enter some text first.'); return; }
+  stopAll();
+  currentText = { id:'custom', title:'Custom Text', cat:'custom', level:'medium', body };
+  buildPlayer('Custom Text', body);
+  switchTab('player');
+}
+
+function buildPlayer(title, body) {
+  document.getElementById('player-title').textContent = title;
+  document.getElementById('player-meta').textContent = 'Ready · tap ▶ to start';
+
+  // Tokenize
+  words = body.split(/\s+/).filter(Boolean);
+  sentences = body.match(/[^.!?]+[.!?]+[\s]*/g) || [body];
+  sentences = sentences.map(s => s.trim()).filter(Boolean);
+  currentSentIdx = 0;
+  currentWordIdx = -1;
+
+  totalEstSec = Math.round(words.length / (130 / 60 * speed));
+  updateTimeLbl(0, totalEstSec);
+  document.getElementById('progress-fill').style.width = '0%';
+
+  // Build word spans
+  document.getElementById('text-display').innerHTML =
+    words.map((w,i) => `<span class="word" id="w${i}">${w} </span>`).join('');
+
+  // Reset AB
+  abA = null; abB = null;
+  document.getElementById('ab-a').classList.remove('set');
+  document.getElementById('ab-b').classList.remove('set');
+  document.getElementById('ab-a').textContent = 'Set A';
+  document.getElementById('ab-b').textContent = 'Set B';
+  document.getElementById('ab-status').textContent = '';
+
+  setPlayIcon(false);
+  isPlaying = false;
+  applySentMode();
+}
+
+// ── TTS ────────────────────────────────────────────────────────────────────
+function togglePlay() {
+  if (!currentText) { switchTab('library'); return; }
+  if (isPlaying) { pauseAll(); }
+  else {
+    if (sentMode) playSent(currentSentIdx);
+    else speakFrom(abA !== null ? abA : Math.max(0, currentWordIdx));
+  }
+}
+
+function speakFrom(startIdx) {
+  stopAll();
+  if (!words.length) return;
+
+  const endIdx = abB !== null ? abB : words.length - 1;
+  if (startIdx > endIdx) startIdx = abA !== null ? abA : 0;
+
+  const text = words.slice(startIdx, endIdx + 1).join(' ');
+  utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  utterance.rate = speed;
+
+  let wIdx = startIdx;
+
+  utterance.onboundary = (e) => {
+    if (e.name !== 'word') return;
+    // un-highlight previous
+    if (currentWordIdx >= 0) {
+      const prev = document.getElementById(`w${currentWordIdx}`);
+      if (prev) { prev.classList.remove('current'); prev.classList.add('spoken'); }
+    }
+    currentWordIdx = wIdx++;
+    const el = document.getElementById(`w${currentWordIdx}`);
+    if (el) {
+      el.classList.add('current');
+      el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+    const pct = (currentWordIdx / (words.length - 1)) * 100;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    const elapsed = Math.round(currentWordIdx / (130 / 60 * speed));
+    updateTimeLbl(elapsed, totalEstSec);
+  };
+
+  utterance.onend = () => {
+    if (abA !== null && abB !== null) {
+      setTimeout(() => speakFrom(abA), 400);
+    } else {
+      isPlaying = false; setPlayIcon(false);
+      saveHistory();
+    }
+  };
+  utterance.onerror = () => { isPlaying = false; setPlayIcon(false); };
+
+  speechSynthesis.speak(utterance);
+  isPlaying = true;
+  setPlayIcon(true);
+}
+
+function playSent(idx) {
+  speechSynthesis.cancel();
+  if (!sentences[idx]) return;
+  const utt = new SpeechSynthesisUtterance(sentences[idx]);
+  utt.lang = 'en-US';
+  utt.rate = speed;
+  utt.onstart = () => { isPlaying = true; setPlayIcon(true); };
+  utt.onend = () => { isPlaying = false; setPlayIcon(false); };
+  utt.onerror = () => { isPlaying = false; setPlayIcon(false); };
+  speechSynthesis.speak(utt);
+}
+
+function pauseAll() {
+  speechSynthesis.cancel();
+  isPlaying = false; setPlayIcon(false);
+}
+
+function stopAll() {
+  speechSynthesis.cancel();
+  isPlaying = false; setPlayIcon(false);
+  document.querySelectorAll('.word').forEach(w => w.classList.remove('current','spoken'));
+  currentWordIdx = -1;
+}
+
+function skipBack() {
+  const wasPlaying = isPlaying;
+  pauseAll();
+  const newIdx = Math.max(0, currentWordIdx - 15);
+  currentWordIdx = newIdx;
+  if (wasPlaying && !sentMode) speakFrom(newIdx);
+}
+
+function restartText() {
+  stopAll();
+  currentWordIdx = -1;
+  currentSentIdx = 0;
+  document.getElementById('progress-fill').style.width = '0%';
+  updateTimeLbl(0, totalEstSec);
+  updateSentView();
+}
+
+// ── Speed ──────────────────────────────────────────────────────────────────
+function setSpeed(s, el) {
+  speed = s;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  totalEstSec = words.length ? Math.round(words.length / (130 / 60 * speed)) : 0;
+  if (isPlaying) {
+    if (sentMode) playSent(currentSentIdx);
+    else speakFrom(Math.max(0, currentWordIdx));
+  }
+}
+
+// ── Sentence mode ──────────────────────────────────────────────────────────
+function toggleSentMode() {
+  sentMode = !sentMode;
+  document.getElementById('sent-toggle').classList.toggle('on', sentMode);
+  if (isPlaying) pauseAll();
+  applySentMode();
+}
+
+function applySentMode() {
+  document.getElementById('text-display').style.display = sentMode ? 'none' : 'block';
+  document.getElementById('sent-nav').classList.toggle('visible', sentMode);
+  if (sentMode) updateSentView();
+}
+
+function updateSentView() {
+  if (!sentences.length) return;
+  document.getElementById('sent-counter').textContent = `${currentSentIdx + 1} / ${sentences.length}`;
+  document.getElementById('sent-display').textContent = sentences[currentSentIdx] || '';
+}
+
+function sentPrev() { pauseAll(); currentSentIdx = Math.max(0, currentSentIdx-1); updateSentView(); }
+function sentRepeat() { playSent(currentSentIdx); }
+function sentNext() { pauseAll(); currentSentIdx = Math.min(sentences.length-1, currentSentIdx+1); updateSentView(); }
+
+// ── A/B Loop ──────────────────────────────────────────────────────────────
+function setAB(pt) {
+  if (pt === 'A') {
+    abA = Math.max(0, currentWordIdx >= 0 ? currentWordIdx : 0);
+    document.getElementById('ab-a').classList.add('set');
+    document.getElementById('ab-a').textContent = `A: ${abA}`;
+  } else {
+    abB = currentWordIdx >= 0 ? currentWordIdx : words.length - 1;
+    document.getElementById('ab-b').classList.add('set');
+    document.getElementById('ab-b').textContent = `B: ${abB}`;
+  }
+  if (abA !== null && abB !== null)
+    document.getElementById('ab-status').textContent = `Loop: word ${abA} → ${abB}`;
+  else if (abA !== null)
+    document.getElementById('ab-status').textContent = `A set · tap Set B to create loop`;
+}
+
+function clearAB() {
+  abA = abB = null;
+  ['ab-a','ab-b'].forEach(id => {
+    document.getElementById(id).classList.remove('set');
+  });
+  document.getElementById('ab-a').textContent = 'Set A';
+  document.getElementById('ab-b').textContent = 'Set B';
+  document.getElementById('ab-status').textContent = '';
+}
+
+// ── Timer / labels ──────────────────────────────────────────────────────────
+function updateTimeLbl(cur, tot) {
+  document.getElementById('time-cur').textContent = fmtSec(cur);
+  document.getElementById('time-tot').textContent = fmtSec(tot);
+}
+function fmtSec(s) {
+  const m = Math.floor(s/60), sec = Math.round(s%60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+// ── Play icon ──────────────────────────────────────────────────────────────
+function setPlayIcon(playing) {
+  document.getElementById('play-icon').innerHTML = playing
+    ? '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'
+    : '<polygon points="5 3 19 12 5 21 5 3"/>';
+}
+
+// ── Recording ──────────────────────────────────────────────────────────────
+async function toggleRec() {
+  const btn = document.getElementById('rec-btn');
+  if (recMediaRecorder && recMediaRecorder.state === 'recording') {
+    recMediaRecorder.stop();
+    recStream.getTracks().forEach(t => t.stop());
+    cancelAnimationFrame(animFrame);
+    btn.classList.remove('recording');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Record`;
+    return;
+  }
+  try {
+    recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const actx = new AudioContext();
+    const src = actx.createMediaStreamSource(recStream);
+    const analyser = actx.createAnalyser(); analyser.fftSize = 256;
+    src.connect(analyser);
+    const canvas = document.getElementById('waveform');
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth * window.devicePixelRatio || canvas.offsetWidth * 2;
+    canvas.height = 120;
+    const draw = () => {
+      animFrame = requestAnimationFrame(draw);
+      const d = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(d);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#2c2c2e'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      const bw = canvas.width / d.length * 2.5;
+      ctx.fillStyle = '#0a84ff';
+      d.forEach((v,i) => { const h=(v/255)*canvas.height; ctx.fillRect(i*bw, canvas.height-h, bw-1, h); });
+    };
+    draw();
+    recChunks = [];
+    const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
+    recMediaRecorder = new MediaRecorder(recStream, { mimeType: mime });
+    recMediaRecorder.ondataavailable = e => recChunks.push(e.data);
+    recMediaRecorder.onstop = () => {
+      const blob = new Blob(recChunks, { type: mime });
+      document.getElementById('rec-audio').src = URL.createObjectURL(blob);
+      document.getElementById('rec-playback').style.display = 'block';
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+    };
+    recMediaRecorder.start();
+    btn.classList.add('recording');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> Stop`;
+  } catch(e) {
+    alert('Microphone access denied. Please allow microphone in Settings > Safari.');
+  }
+}
+
+// ── History ────────────────────────────────────────────────────────────────
+function saveHistory() {
+  if (!currentText) return;
+  history.unshift({
+    title: currentText.title,
+    date: new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }),
+    words: words.length, speed
+  });
+  if (history.length > 60) history.pop();
+  localStorage.setItem('sh_hist3', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('hist-list');
+  if (!history.length) {
+    list.innerHTML = '<div class="empty-state">No sessions yet.<br>Start practicing to build your history.</div>';
+    return;
+  }
+  list.innerHTML = history.map(h => `
+    <div class="hist-item">
+      <div class="hist-title">${h.title}</div>
+      <div class="hist-meta">${h.date} · ${h.words} words · ×${h.speed}</div>
+    </div>
+  `).join('');
+}
+
+// ── Tab ────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'history') renderHistory();
+  if (name === 'library') renderLibrary();
+}
+
+// iOS: keep speech alive when screen dims
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && isPlaying) speechSynthesis.resume();
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+renderLibrary();
+renderHistory();
+</script>
+</body>
+</html>
